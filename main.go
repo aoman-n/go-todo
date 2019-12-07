@@ -9,7 +9,13 @@ import (
 func main() {
 	router := gin.Default()
 
-	router.GET("/", controller.IndexGET)
-	router.POST("/", controller.PostsPost)
+	v1 := router.Group("/api/v1")
+	{
+		v1.GET("/", controller.TodosIndexEndpoint)
+		v1.GET("/:id", controller.TodosShowEndpoint)
+		v1.POST("/", controller.TodosCreateEndpoint)
+		v1.DELETE("/:id", controller.TodosDeleteEndpoint)
+	}
+
 	router.Run(":" + config.Config.Port)
 }

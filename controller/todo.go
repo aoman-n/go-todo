@@ -3,6 +3,7 @@ package controller
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,38 +16,83 @@ type Todo struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-var Todos = []Todo{
-	{Id: 1, Title: "number. 1", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-	{Id: 2, Title: "number. 2", CreatedAt: time.Now(), UpdatedAt: time.Now()},
-	{Id: 3, Title: "number. 3", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+var Todos = map[int]Todo{
+	1: {Id: 1, Title: "number. 1", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	2: {Id: 2, Title: "number. 2", CreatedAt: time.Now(), UpdatedAt: time.Now()},
+	3: {Id: 3, Title: "number. 3", CreatedAt: time.Now(), UpdatedAt: time.Now()},
 }
+var LastId = 3
 
-func IndexGET(c *gin.Context) {
-	// res, err := json.Marshal(Todos)
-	// if err != nil {
-	// 	log.Fatalln("err: ", err)
-	// 	c.String(http.StatusInternalServerError, "Server Error")
-	// }
-	// c.String(http.StatusOK, string(res))
+func TodosIndexEndpoint(c *gin.Context) {
+	resTodos := make([]Todo, len(Todos))
+	i := 0
+	for _, todo := range Todos {
+		resTodos[i] = todo
+		i++
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
-		"todos":  Todos,
+		"todos":  resTodos,
 	})
 }
 
-func PostsPost(c *gin.Context) {
+func TodosShowEndpoint(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "ng",
+		})
+	}
+	resTodo, ok := Todos[id]
+	if ok == false {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":  "ng",
+			"message": "todo not found",
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+		"todo":   resTodo,
+	})
+}
+
+func TodosCreateEndpoint(c *gin.Context) {
 	title := c.PostForm("title")
-	id := Todos[len(Todos)-1].Id + 1
+	id := LastId + 1
+	LastId = id
 	todo := Todo{
 		Id:        id,
 		Title:     title,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	Todos = append(Todos, todo)
+	Todos[LastId+1] = todo
 	log.Printf("create new todo. %v \n", todo)
 	c.JSON(http.StatusCreated, gin.H{
 		"status": "ok",
 		"todo":   todo,
+	})
+}
+
+func TodosDeleteEndpoint(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status": "ng",
+		})
+	}
+
+	_, ok := Todos[id]
+	if ok == false {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":  "ng",
+			"message": "todo not found",
+		})
+	}
+
+	delete(Todos, id)
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "ok",
+		"message": "deleted.",
 	})
 }
